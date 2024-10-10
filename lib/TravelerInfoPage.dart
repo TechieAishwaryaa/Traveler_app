@@ -36,6 +36,7 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
     final bookingsCollection = FirebaseFirestore.instance.collection('bookings');
     final snapshot = await bookingsCollection.get();
     final List<Map<String, dynamic>> fetchedBookings = [];
+    
 
     for (var doc in snapshot.docs) {
       // Access the travelerId within the traveler map
@@ -214,7 +215,7 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
             child: Column(
               children: _bookings.map((booking) {
                 // Check if the booking status is 'confirmed'
-                if (booking['status'] == 'confirmed') {
+                if (booking['kuli']['status'] == 'confirmed') {
                   // Show confirmation dialog
                   Future.delayed(Duration.zero, () {
                     _showConfirmationDialog();

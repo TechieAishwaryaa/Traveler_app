@@ -27,9 +27,9 @@ class KuliDetailsPage extends StatelessWidget {
         'kuliId': kuli['id'], // Use the kuli's ID
         'name': kuli['name'],
         'phone': kuli['phone'],
-        'profileImage': kuli['profileImage'],
+        'profileImage': kuli['imageUrl'],
         'station': kuli['station'],
-        'status': 'confirmed',
+        'status': 'pending',
       },
       'traveler': {
         'current_location': travelerData['currentLocation'], // Current location from traveler data
