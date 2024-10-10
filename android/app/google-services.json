@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "266668166073",
+    "project_id": "book-my-coolie-82e3c",
+    "storage_bucket": "book-my-coolie-82e3c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:266668166073:android:6562eebd83795e7ae00468",
+        "android_client_info": {
+          "package_name": "com.app.book_my_kuli"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvLr2E9flCan9B7Rm5RdL1EEDWX_YR5zo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:266668166073:android:938a6aad0a8785d0e00468",
+        "android_client_info": {
+          "package_name": "com.example.traveler_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvLr2E9flCan9B7Rm5RdL1EEDWX_YR5zo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
