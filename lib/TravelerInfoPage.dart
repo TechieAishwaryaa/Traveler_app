@@ -1,6 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'KuliListPage.dart';
+import 'package:dio/dio.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:html' as html;
+import 'BookingDetailsPage.dart';
 
 class TravelerInfoPage extends StatefulWidget {
   final Map<String, dynamic> travelerData;
@@ -30,35 +35,32 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
     super.dispose();
   }
 
-  Future<void> _fetchBookings() async {
-  try {
+   Stream<void> _fetchBookings() {
     final travelerId = widget.travelerData['travelerId']; // Get the current traveler ID
-    final bookingsCollection = FirebaseFirestore.instance.collection('bookings');
-    final snapshot = await bookingsCollection.get();
-    final List<Map<String, dynamic>> fetchedBookings = [];
-    
 
-    for (var doc in snapshot.docs) {
-      // Access the travelerId within the traveler map
-      final travelerMap = doc.data()['traveler'] as Map<String, dynamic>;
+    return FirebaseFirestore.instance.collection('bookings').snapshots().map((snapshot) {
+      final List<Map<String, dynamic>> fetchedBookings = [];
 
-      if (travelerMap['travelerId'] == travelerId) {
-        fetchedBookings.add({
-          ...doc.data() as Map<String, dynamic>,
-          'id': doc.id, // Add document ID to the booking map
-        });
+      for (var doc in snapshot.docs) {
+        // Access the travelerId within the traveler map
+        final travelerMap = doc.data()['traveler'] as Map<String, dynamic>;
+
+        if (travelerMap['travelerId'] == travelerId) {
+          fetchedBookings.add({
+            ...doc.data() as Map<String, dynamic>,
+            'id': doc.id, // Add document ID to the booking map
+          });
+        }
       }
-    }
 
-    setState(() {
-      _bookings = fetchedBookings;
+      setState(() {
+        _bookings = fetchedBookings;
+      });
+
+      print('Bookings fetched for travelerId $travelerId: $_bookings');
     });
-
-    print('Bookings fetched for travelerId $travelerId: $_bookings');
-  } catch (e) {
-    print('Error fetching bookings: $e');
   }
-}
+
 
   // Fetch kulis based on the destination
   Future<List<Map<String, dynamic>>> _fetchKulis(String station) async {
@@ -121,8 +123,10 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
     );
   }
 
-  Widget _buildPageContent() {
+  @override
+Widget _buildPageContent() {
   if (_selectedIndex == 0) {
+    // Traveler Info Form
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -200,22 +204,36 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
       ],
     );
   } else {
-    return _bookings.isEmpty
-        ? const Center(
-            child: Text(
-              'No bookings found.',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.deepOrange,
-              ),
-            ),
-          )
-        : SingleChildScrollView(
+    // Use StreamBuilder for real-time updates
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('bookings')
+          .where('traveler.travelerId', isEqualTo: widget.travelerData['travelerId'])
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error fetching bookings.'));
+        }
+
+        // Check if the snapshot has data
+        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+          // Convert Firestore snapshot data to List<Map<String, dynamic>>
+          final bookingsData = snapshot.data!.docs.map((doc) {
+            return {
+              'id': doc.id,
+              ...doc.data() as Map<String, dynamic>,
+            };
+          }).toList();
+
+          return SingleChildScrollView(
             child: Column(
-              children: _bookings.map((booking) {
+              children: bookingsData.map((booking) {
                 // Check if the booking status is 'confirmed'
-                if (booking['kuli']['status'] == 'confirmed') {
+                if (booking['status'] == 'confirmed') {
                   // Show confirmation dialog
                   Future.delayed(Duration.zero, () {
                     _showConfirmationDialog();
@@ -272,7 +290,7 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
                           ),
                         ),
                         Text(
-                          'Phone: ${booking['traveler']['phone_number']}',
+                          'Kuli Phone: ${booking['kuli']['phone']}',
                           style: const TextStyle(
                             fontSize: 16,
                             color: Colors.black54,
@@ -280,12 +298,36 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Status: ${booking['kuli']['status']}',
+                          'Status: ${booking['status']}',
                           style: const TextStyle(
                             fontSize: 16,
-                            color: Colors.deepOrange,
                             fontWeight: FontWeight.bold,
+                            color: Colors.deepOrange,
                           ),
+                        ),
+                        TextButton(
+                          onPressed: () => _openImageUrl(booking['kuli']['profileImage']),
+                          child: const Text('Download Image', style: TextStyle(color: Colors.blue)),
+                        ),
+                        const SizedBox(height: 12),
+                        // Add the Confirmed Booking Button
+                        ElevatedButton(
+                          onPressed: booking['status'] == 'confirmed'
+                              ? () {
+                                  // Define the action when the button is pressed, e.g., navigate to booking details
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => BookingDetailsPage(booking: booking),
+                                    ),
+                                  );
+                                }
+                              : null, // Disable the button if the booking is not confirmed
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: booking['status'] == 'confirmed' ? Colors.deepOrange : Colors.grey,
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                          ),
+                          child: const Text('Confirmed Booking Action'), // Button text
                         ),
                       ],
                     ),
@@ -294,44 +336,49 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
               }).toList(),
             ),
           );
+        } else {
+          return const Center(child: Text('No bookings found.'));
+        }
+      },
+    );
   }
 }
-
-// Method to show confirmation dialog
-void _showConfirmationDialog() {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text('Booking Confirmed'),
-        content: const Text('Your booking has been confirmed by the Kuli.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close the dialog
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      );
-    },
-  );
+//this method in your _TravelerInfoPageState class
+void _openImageUrl(String url) {
+  // Use html.window.open to open the URL
+  html.window.open(url, '_blank');
 }
+
+  void _showConfirmationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Booking Confirmed'),
+          content: const Text('Your booking has been confirmed by the kuli.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Traveler Information',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        backgroundColor: Colors.deepOrangeAccent[100],
+        backgroundColor: Colors.deepOrange,
+        title: const Text('Traveler Info'),
         centerTitle: true,
-        elevation: 8,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
         child: _buildPageContent(),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -341,22 +388,17 @@ void _showConfirmationDialog() {
             _selectedIndex = index;
           });
         },
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.deepOrange,
-        unselectedItemColor: Colors.deepOrangeAccent[100],
-        selectedIconTheme: const IconThemeData(color: Colors.deepOrange, size: 28),
-        unselectedIconTheme: const IconThemeData(color: Colors.deepOrangeAccent, size: 24),
-        selectedLabelStyle: const TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(color: Colors.deepOrangeAccent),
-        showUnselectedLabels: true,
+        backgroundColor: Colors.deepOrange[100],
+        selectedItemColor: Colors.deepOrangeAccent,
+        unselectedItemColor: Colors.black54,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.add_location_alt_outlined),
-            label: 'Choose Location',
+            icon: Icon(Icons.info_outline),
+            label: 'Traveler Info',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.view_list),
-            label: 'View Bookings',
+            icon: Icon(Icons.list_alt),
+            label: 'Bookings',
           ),
         ],
       ),
