@@ -30,7 +30,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (travelerSnapshot.docs.isNotEmpty) {
       // If email exists, get the traveler's data
-      final travelerData = travelerSnapshot.docs.first.data() as Map<String, dynamic>;
+      final travelerData = travelerSnapshot.docs.first.data();
 
       // Debugging output to check what data we fetched
       print('Traveler Data: $travelerData');

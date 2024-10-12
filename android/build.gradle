@@ -1,19 +1,22 @@
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        // Add the dependency for the Google services Gradle plugin
-        classpath 'com.google.gms:google-services:4.4.2'
-        // Add any other project-level dependencies you need here
-    }
-}
 
-allprojects {
+
+buildscript {
+    ext.kotlin_version = '1.9.23' // Ensure compatibility with your project
     repositories {
         google()
         mavenCentral()
+        jcenter() // Optional; jcenter has been deprecated
+    }
+
+    dependencies {
+        // Android Gradle plugin, compatible with Gradle 7.6 and JDK 19
+        classpath 'com.android.tools.build:gradle:7.1.2'
+        
+        // Google services plugin for Firebase integration
+        classpath 'com.google.gms:google-services:4.3.13'
+        
+        // Kotlin Gradle plugin
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -21,6 +24,16 @@ plugins {
     // Apply Google services Gradle plugin
     id 'com.google.gms.google-services' version '4.4.2' apply false
 }
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+        mavenCentral()
+    }
+}
+
+
 
 rootProject.buildDir = "../build"
 subprojects {

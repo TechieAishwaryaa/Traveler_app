@@ -54,6 +54,10 @@ dev_dependencies:
   http: ^1.2.2  # If newer versions are resolvable, adjust here
   firebase_phone_auth_handler: ^1.1.0
   shared_preferences: ^2.3.2
+  cached_network_image: ^3.4.1
+  dio: ^5.7.0
+  url_launcher: ^6.3.1
+  
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

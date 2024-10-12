@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'KuliListPage.dart';
 import 'package:dio/dio.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'dart:html' as html;
+//import 'package:url_launcher/url_launcher.dart';
+//import 'dart:html' as html;
 import 'BookingDetailsPage.dart';
 
 class TravelerInfoPage extends StatefulWidget {
@@ -47,7 +47,7 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
 
         if (travelerMap['travelerId'] == travelerId) {
           fetchedBookings.add({
-            ...doc.data() as Map<String, dynamic>,
+            ...doc.data(),
             'id': doc.id, // Add document ID to the booking map
           });
         }
@@ -306,7 +306,7 @@ Widget _buildPageContent() {
                           ),
                         ),
                         TextButton(
-                          onPressed: () => _openImageUrl(booking['kuli']['profileImage']),
+                          onPressed: () => print("heloo world"),
                           child: const Text('Download Image', style: TextStyle(color: Colors.blue)),
                         ),
                         const SizedBox(height: 12),
@@ -344,10 +344,10 @@ Widget _buildPageContent() {
   }
 }
 //this method in your _TravelerInfoPageState class
-void _openImageUrl(String url) {
+/*void _openImageUrl(String url) {
   // Use html.window.open to open the URL
   html.window.open(url, '_blank');
-}
+}*/
 
   void _showConfirmationDialog() {
     showDialog(

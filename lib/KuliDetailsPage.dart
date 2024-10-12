@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_sms/flutter_sms.dart';
+
 
 class KuliDetailsPage extends StatefulWidget {
   final Map<String, dynamic> kuli;
@@ -50,12 +49,10 @@ class _KuliDetailsPageState extends State<KuliDetailsPage> {
     };
 
     try {
-      setState(() {
-        _isSendingSms = true; // Set loading state to true
-      });
+      
 
       // Send SMS
-      await _sendSms(widget.kuli['phone']);
+      
 
       // If SMS is sent successfully, then store booking data
       await firestore.collection('bookings').add(bookingData);
@@ -67,27 +64,10 @@ class _KuliDetailsPageState extends State<KuliDetailsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to confirm booking: $e')),
       );
-    } finally {
-      setState(() {
-        _isSendingSms = false; // Reset loading state
-      });
-    }
+    } 
   }
 
-  Future<void> _sendSms(String phoneNumber) async {
-    final String message = "Hello, I would like to confirm my booking with you."; // Your message here
-
-    try {
-      await sendSMS(
-        message: message,
-        recipients: [phoneNumber],
-      );
-      print('SMS sent successfully');
-    } catch (e) {
-      throw Exception('Failed to send SMS: $e'); // Throw an error if SMS fails
-    }
-  }
-
+  
   @override
   Widget build(BuildContext context) {
     final String profileImageUrl = widget.kuli['profileImage'] ?? '';
