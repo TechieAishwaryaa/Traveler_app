@@ -20,63 +20,91 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> login(BuildContext context) async {
-    final email = emailController.text.trim();
+  final email = emailController.text.trim();
 
-    // Check if the email exists in the travelers collection
-    final travelerSnapshot = await FirebaseFirestore.instance
-        .collection('travelers')
-        .where('email', isEqualTo: email)
-        .get();
+  if (email.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Please enter your email address.'),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return; // Stop further execution if email is empty
+  }
 
-    if (travelerSnapshot.docs.isNotEmpty) {
-      // If email exists, get the traveler's data
-      final travelerData = travelerSnapshot.docs.first.data();
+  // Regular expression for validating an email format
+  final emailPattern = r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$';
+  final regExp = RegExp(emailPattern);
 
-      // Debugging output to check what data we fetched
-      print('Traveler Data: $travelerData');
+  // Check if the email format is valid
+  if (!regExp.hasMatch(email)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Please enter a valid email address.'),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return; // Stop further execution if email is invalid
+  }
 
-      // Extract necessary data with the modified structure
-      final travelerInfo = {
-        'email': travelerData['email'] ?? '',
-        'password': travelerData['password'] ?? '', // Ensure 'password' is included if needed
-        'phone': travelerData['phone'] ?? '',
-        'photoUrl': travelerData['photoUrl'] ?? '',
-        'travelerId': travelerData['travelerId'] ?? '',
-        'travelerName': travelerData['travelerName'] ?? 'Unknown',
-      };
+  // Check if the email exists in the travelers collection
+  final travelerSnapshot = await FirebaseFirestore.instance
+      .collection('travelers')
+      .where('email', isEqualTo: email)
+      .get();
 
-      // Check if travelerName was fetched correctly
-      if (travelerInfo['travelerName'] != 'Unknown') {
-        // Navigate to TravelerInfoPage with traveler data
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TravelerInfoPage(
-              travelerData: travelerInfo, // Pass all required data to the next page
-            ),
+  if (travelerSnapshot.docs.isNotEmpty) {
+    // If email exists, get the traveler's data
+    final travelerData = travelerSnapshot.docs.first.data();
+
+    // Debugging output to check what data we fetched
+    print('Traveler Data: $travelerData');
+
+    // Extract necessary data with the modified structure
+    final travelerInfo = {
+      'email': travelerData['email'] ?? '',
+      'password': travelerData['password'] ?? '', // Ensure 'password' is included if needed
+      'phone': travelerData['phone'] ?? '',
+      'photoUrl': travelerData['photoUrl'] ?? '',
+      'travelerId': travelerData['travelerId'] ?? '',
+      'travelerName': travelerData['travelerName'] ?? 'Unknown',
+    };
+
+    // Check if travelerName was fetched correctly
+    if (travelerInfo['travelerName'] != 'Unknown') {
+      // Navigate to TravelerInfoPage with traveler data
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TravelerInfoPage(
+            travelerData: travelerInfo, // Pass all required data to the next page
           ),
-        );
-      } else {
-        // Handle case where travelerName is not fetched correctly
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Traveler name not found. Please check your data.'),
-            backgroundColor: Colors.redAccent,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+        ),
+      );
     } else {
-      // Show an error if email is not found
+      // Handle case where travelerName is not fetched correctly
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Email not found. Please register first.'),
+          content: const Text('Traveler name not found. Please check your data.'),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
+  } else {
+    // Show an error if email is not found
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Email not found. Please register first.'),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

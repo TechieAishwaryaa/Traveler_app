@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-
+import 'package:url_launcher/url_launcher.dart';  // Import url_launcher for SMS
 
 class KuliDetailsPage extends StatefulWidget {
   final Map<String, dynamic> kuli;
@@ -22,8 +21,43 @@ class KuliDetailsPage extends StatefulWidget {
 }
 
 class _KuliDetailsPageState extends State<KuliDetailsPage> {
-  bool _isSendingSms = false; // State to manage SMS sending
+  bool _isProcessing = false; // State to manage button state
 
+  // Method to send SMS to the intended kuli
+  Future<void> _sendSmsAndConfirmBooking(BuildContext context) async {
+    setState(() {
+      _isProcessing = true;  // Show loading state
+    });
+
+    final String phoneNumber = widget.kuli['phone'] ?? '';
+    final String smsBody = "Hello ${widget.kuli['name']}, "
+        "I would like to book your services as a kuli. "
+        "Please contact me for further details.";
+
+    // SMS URL scheme for sending an SMS
+    final Uri smsUri = Uri(
+      scheme: 'sms',
+      path: phoneNumber,
+      queryParameters: <String, String>{'body': smsBody},
+    );
+
+    // Launch the SMS app using canLaunchUrl and launchUrl
+    if (await canLaunchUrl(smsUri)) {
+      await launchUrl(smsUri);
+
+      // Proceed with confirming the booking in Firestore
+      await _confirmBooking(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not send SMS')),
+      );
+      setState(() {
+        _isProcessing = false; // Stop loading state
+      });
+    }
+  }
+
+  // Confirm booking and store booking details in Firestore
   Future<void> _confirmBooking(BuildContext context) async {
     final firestore = FirebaseFirestore.instance;
 
@@ -49,28 +83,30 @@ class _KuliDetailsPageState extends State<KuliDetailsPage> {
     };
 
     try {
-      
-
-      // Send SMS
-      
-
-      // If SMS is sent successfully, then store booking data
+      // Store booking data in Firestore
       await firestore.collection('bookings').add(bookingData);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Booking confirmed for ${widget.kuli['name']}')),
       );
-      Navigator.pop(context); // Navigate back if booking is successful
+
+      // Navigate back to the previous screen after booking is successful
+      Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to confirm booking: $e')),
       );
-    } 
+    } finally {
+      setState(() {
+        _isProcessing = false; // Stop loading state
+      });
+    }
   }
 
-  
   @override
   Widget build(BuildContext context) {
-    final String profileImageUrl = widget.kuli['profileImage'] ?? '';
+    // Get profile image URL or use a placeholder
+    final String profileImageUrl = widget.kuli['imageUrl'] ?? '';
 
     return Scaffold(
       appBar: AppBar(
@@ -87,15 +123,7 @@ class _KuliDetailsPageState extends State<KuliDetailsPage> {
                 backgroundColor: Colors.grey.shade300,
                 radius: 70,
                 child: ClipOval(
-                  child: CachedNetworkImage(
-                    imageUrl: profileImageUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => const CircularProgressIndicator(), // Loading indicator
-                    errorWidget: (context, url, error) => Image.asset(
-                      'assets/logo.png', // Fallback asset image
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                  child: Image.network(profileImageUrl),
                 ),
               ),
             ),
@@ -116,7 +144,9 @@ class _KuliDetailsPageState extends State<KuliDetailsPage> {
             Text('Availability: ${widget.kuli['availability'] ?? 'Not specified'}'),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _isSendingSms ? null : () => _confirmBooking(context),
+              onPressed: _isProcessing
+                  ? null
+                  : () => _sendSmsAndConfirmBooking(context),  // Call combined function
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.deepOrangeAccent,
                 padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 30),
@@ -128,9 +158,9 @@ class _KuliDetailsPageState extends State<KuliDetailsPage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              child: _isSendingSms
-                  ? const CircularProgressIndicator() // Show loading indicator when sending SMS
-                  : const Text('Confirm Booking'),
+              child: _isProcessing
+                  ? const CircularProgressIndicator() // Show loading indicator when processing
+                  : const Text('Confirm Booking & Send SMS'),
             ),
           ],
         ),

@@ -1,32 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';  // Import Firestore
 import 'KuliDetailsPage.dart';
 
-class KuliListPage extends StatelessWidget {
+class KuliListPage extends StatefulWidget {
   final String station;
-  final List<Map<String, dynamic>> kulis;
-  final Map<String, dynamic> travelerData; // New parameter for traveler data
-  final String destination; // New parameter for destination
-  final String luggageQuantity; // New parameter for luggage quantity
+  final Map<String, dynamic> travelerData; // Traveler data
+  final String destination; // Destination
+  final String luggageQuantity; // Luggage quantity
 
   const KuliListPage({
     Key? key,
     required this.station,
-    required this.kulis,
-    required this.travelerData, // Add traveler data to the constructor
-    required this.destination, // Add destination to the constructor
-    required this.luggageQuantity, // Add luggage quantity to the constructor
+    required this.travelerData,
+    required this.destination,
+    required this.luggageQuantity,
   }) : super(key: key);
 
-  // Navigate to the Kuli Details page
+  @override
+  _KuliListPageState createState() => _KuliListPageState();
+}
+
+class _KuliListPageState extends State<KuliListPage> {
+  List<Map<String, dynamic>> kulis = []; // Initialize empty list for Kulis
+  bool isLoading = true;
+
+  // Fetch Kulis matching the destination
+  Future<void> _fetchKulis() async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('kuli') // Assuming 'kuli' is your collection name
+          .where('station', isEqualTo: widget.destination) // Filter by destination
+          .get();
+
+      setState(() {
+        kulis = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+        isLoading = false; // Stop the loading indicator
+      });
+    } catch (error) {
+      print('Error fetching Kulis: $error');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchKulis(); // Fetch Kulis on page load
+  }
+
+  // Navigate to Kuli Details page
   void _navigateToKuliDetails(BuildContext context, Map<String, dynamic> kuli) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => KuliDetailsPage(
           kuli: kuli,
-          travelerData: travelerData, // Pass traveler data
-          destination: destination, // Pass destination
-          luggageQuantity: luggageQuantity, // Pass luggage quantity
+          travelerData: widget.travelerData,
+          destination: widget.destination,
+          luggageQuantity: widget.luggageQuantity,
         ),
       ),
     );
@@ -40,34 +73,46 @@ class KuliListPage extends StatelessWidget {
         backgroundColor: Colors.deepOrangeAccent,
         centerTitle: true,
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: kulis.length,
-        itemBuilder: (context, index) {
-          final kuli = kulis[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(vertical: 10),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundImage: NetworkImage(kuli['profileImage']),
-              ),
-              title: Text(kuli['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Experience: ${kuli['experience']}'),
-                  Text('Rating: ${kuli['rating'] ?? 'No rating'}'),  // Display rating
-                  Text('Phone: ${kuli['phone']}'),
-                ],
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.select_all, color: Colors.deepOrange),
-                onPressed: () => _navigateToKuliDetails(context, kuli), // Navigate to details page
-              ),
-            ),
-          );
-        },
-      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator()) // Loading indicator
+          : kulis.isEmpty
+              ? const Center(child: Text('No Kulis available for this destination'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: kulis.length,
+                  itemBuilder: (context, index) {
+                    final kuli = kulis[index];
+
+                    // Check for null values and provide default values if necessary
+                    final String name = kuli['name'] ?? 'Unknown Kuli';
+                    final String phone = kuli['phone'] ?? 'No phone number available';
+                    final String experience = kuli['experience'] ?? 'Experience not specified';
+                    final String rating = kuli['rating']?.toString() ?? 'No rating'; // Ensure rating is a string
+                    final String profileImage = kuli['imageUrl'] ?? 'assets/default_avatar.png'; // Fallback image
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 10),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: NetworkImage(profileImage),
+                        ),
+                        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Experience: $experience'),
+                            Text('Rating: $rating'),  // Display rating
+                            Text('Phone: $phone'),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.select_all, color: Colors.deepOrange),
+                          onPressed: () => _navigateToKuliDetails(context, kuli), // Navigate to details page
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }

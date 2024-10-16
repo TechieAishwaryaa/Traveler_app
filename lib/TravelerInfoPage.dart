@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'KuliListPage.dart';
-import 'package:dio/dio.dart';
-import 'package:permission_handler/permission_handler.dart';
+//import 'package:dio/dio.dart';
+//import 'package:permission_handler/permission_handler.dart';
 //import 'package:url_launcher/url_launcher.dart';
 //import 'dart:html' as html;
 import 'BookingDetailsPage.dart';
@@ -36,64 +36,78 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
   }
 
    Stream<void> _fetchBookings() {
-    final travelerId = widget.travelerData['travelerId']; // Get the current traveler ID
-
-    return FirebaseFirestore.instance.collection('bookings').snapshots().map((snapshot) {
-      final List<Map<String, dynamic>> fetchedBookings = [];
-
-      for (var doc in snapshot.docs) {
-        // Access the travelerId within the traveler map
-        final travelerMap = doc.data()['traveler'] as Map<String, dynamic>;
-
-        if (travelerMap['travelerId'] == travelerId) {
-          fetchedBookings.add({
-            ...doc.data(),
-            'id': doc.id, // Add document ID to the booking map
-          });
-        }
-      }
-
-      setState(() {
-        _bookings = fetchedBookings;
-      });
-
-      print('Bookings fetched for travelerId $travelerId: $_bookings');
-    });
+  final travelerId = widget.travelerData['travelerId'];
+  
+  if (travelerId == null) {
+    // Handle null travelerId here (e.g., show a message or return)
+    print('Traveler ID is null');
+    return Stream.empty(); // Return an empty stream if travelerId is null
   }
+
+  return FirebaseFirestore.instance.collection('bookings').snapshots().map((snapshot) {
+    final List<Map<String, dynamic>> fetchedBookings = [];
+
+    for (var doc in snapshot.docs) {
+      final travelerMap = doc.data()['traveler'] as Map<String, dynamic>?; // Use null-aware operator
+
+      if (travelerMap != null && travelerMap['travelerId'] == travelerId) {
+        fetchedBookings.add({
+          ...doc.data(),
+          'id': doc.id,
+        });
+      }
+    }
+
+    setState(() {
+      _bookings = fetchedBookings;
+    });
+
+    print('Bookings fetched for travelerId $travelerId: $_bookings');
+  });
+}
 
 
   // Fetch kulis based on the destination
-  Future<List<Map<String, dynamic>>> _fetchKulis(String station) async {
-    try {
-      print('Fetching kulis for station: $station');
+  /*Future<List<Map<String, dynamic>>> _fetchKulis(String station) async {
+  try {
+    // Trim the input to remove leading and trailing spaces
+    station = station;
+    
+    print('Fetching kulis for station: $station');
 
-      final QuerySnapshot kulisSnapshot = await FirebaseFirestore.instance
-          .collection('kuli')
-          .where('station', isEqualTo: station)
-          .get();
+    // Check if the station name is empty after trimming
+    if (station.isEmpty) {
+      print('Invalid station name. Please provide a valid station name.');
+      return []; // Return an empty list if the station name is empty
+    }
 
-      if (kulisSnapshot.docs.isEmpty) {
-        print('No kulis found for station: $station');
-        return [];
-      }
+    final QuerySnapshot kulisSnapshot = await FirebaseFirestore.instance
+        .collection('kuli')
+        .where('station', isEqualTo: station)
+        .get();
 
-      return kulisSnapshot.docs.map((doc) {
-        print('Kuli found: ${doc.data()}');
-        return {
-          'id': doc.id,
-          ...doc.data() as Map<String, dynamic>,
-        };
-      }).toList();
-    } catch (e) {
-      print('Error fetching kulis: $e');
+    if (kulisSnapshot.docs.isEmpty) {
+      print('No kulis found for station: $station');
       return [];
     }
+
+    return kulisSnapshot.docs.map((doc) {
+      print('Kuli found: ${doc.data()}');
+      return {
+        'id': doc.id,
+        ...doc.data() as Map<String, dynamic>,
+      };
+    }).toList();
+  } catch (e) {
+    print('Error fetching kulis: $e');
+    return [];
   }
+}*/
 
   // Submit the destination and luggage info
   void _submitTravelerInfo() async {
-    final destination = destinationController.text;
-    final luggageQuantity = luggageController.text;
+    final destination = destinationController.text.trim();
+    final luggageQuantity = luggageController.text.trim();
 
     if (destination.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -106,7 +120,10 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
     }
 
     // Fetch available kulis
-    final kulis = await _fetchKulis(destination);
+    //final kulis = await _fetchKulis(destination);
+    print('Destination: $destination');
+print('Luggage Quantity: $luggageQuantity');
+
 
     // Navigate to KuliListPage with kulis data, traveler info, destination, and luggage quantity
     Navigator.push(
@@ -114,10 +131,10 @@ class _TravelerInfoPageState extends State<TravelerInfoPage> {
       MaterialPageRoute(
         builder: (context) => KuliListPage(
           station: destination,
-          kulis: kulis,
+          //kulis: kulis,
           travelerData: widget.travelerData,
           destination: destination,
-          luggageQuantity: luggageQuantity,
+          luggageQuantity: luggageQuantity.isNotEmpty ? luggageQuantity : "0",
         ),
       ),
     );
